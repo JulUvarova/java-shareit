@@ -37,7 +37,7 @@ public class UserStorage {
 
     private void emailCheck(User user) {
         for (Map.Entry<Long, User> entry : users.entrySet()) {
-            if (entry.getValue().getEmail().equals(user.getEmail()) & entry.getKey() != user.getId()) {
+            if (entry.getValue().getEmail().equals(user.getEmail()) && entry.getKey() != user.getId()) {
                 throw new ConflictException(String.format("Пользователь с email %s уже существует", user.getEmail()));
             }
         }
