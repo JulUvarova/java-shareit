@@ -3,45 +3,47 @@ package ru.practicum.shareit.item;
 import org.springframework.stereotype.Repository;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Repository
 public class ItemStorage {
-    private Map<Long, Item> items = new HashMap<>();
+    private final Map<Long, List<Item>> userItemIndex = new LinkedHashMap<>();
     private long count;
 
-    public Item addItem(Item item) {
+    public Item addItem(long userId, Item item) {
         item.setId(++count);
-        items.put(item.getId(), item);
-        return item;
-    }
-
-    public Item updateItem(Item item) {
-        items.put(item.getId(), item);
+        final List<Item> items = userItemIndex.computeIfAbsent(userId, k -> new ArrayList<>());
+        items.add(item);
         return item;
     }
 
     public Optional<Item> getItemById(long id) {
-        return Optional.ofNullable(items.get(id));
+        for(Map.Entry<Long, List<Item>> entry : userItemIndex.entrySet()){
+            for(Item item : entry.getValue()){
+                if (item.getId() == id) {
+                    return Optional.of(item);
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     public List<Item> getItemsByUserId(long userId) {
-        List<Item> itemsList = new ArrayList<>(items.values());
-        List<Item> itemsByUserId = itemsList.stream().filter(i -> i.getOwner() == userId).collect(Collectors.toList());
-        return itemsByUserId;
+        List<Item> itemsList = new ArrayList<>(userItemIndex.get(userId));
+        return itemsList;
     }
 
     public List<Item> searchItems(String query) {
-        List<Item> itemsList = new ArrayList<>(items.values());
-        List<Item> foundItems = itemsList.stream()
-                .filter(i -> (i.getName().toLowerCase().contains(query.toLowerCase())
-                        || i.getDescription().toLowerCase().contains(query.toLowerCase()))
-                        && i.getAvailable().equals(true)
-                ).collect(Collectors.toList());
+        String findText = query.toLowerCase();
+        List<Item> foundItems = new ArrayList<>();
+        for(Map.Entry<Long, List<Item>> entry : userItemIndex.entrySet()){
+            for(Item item : entry.getValue()){
+                if (item.getName().toLowerCase().contains(findText)
+                        || item.getDescription().toLowerCase().contains(findText)
+                        && item.getAvailable().equals(true)) {
+                    foundItems.add(item);
+                }
+            }
+        }
         return foundItems;
-    }
-
-    public void deleteItemById(long id) {
-        items.remove(id);
     }
 }

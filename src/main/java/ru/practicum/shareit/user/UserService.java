@@ -25,16 +25,17 @@ public class UserService {
     }
 
     public UserDto updateUserById(long userId, UserDto user) {
-        User expectedUser = new User(checkUserId(userId));
-        if (user.getName() != null) {
+        userStorage.emailCheck(userId, user.getEmail());
+        User expectedUser = checkUserId(userId);
+
+        if (user.getName() != null  && !user.getName().isBlank()) {
             expectedUser.setName(user.getName());
         }
-        if (user.getEmail() != null) {
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
             expectedUser.setEmail(user.getEmail());
         }
-        User updatedUser = userStorage.updateUser(expectedUser);
         log.info("Обновлен пользователь с id {}", userId);
-        return UserMapper.toUserDto(updatedUser);
+        return UserMapper.toUserDto(expectedUser);
     }
 
     public UserDto getUserById(long id) {

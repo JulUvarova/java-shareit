@@ -11,14 +11,8 @@ public class UserStorage {
     private long count;
 
     public User addUser(User user) {
-        emailCheck(user);
+        emailCheck(user.getId(), user.getEmail());
         user.setId(++count);
-        users.put(user.getId(), user);
-        return user;
-    }
-
-    public User updateUser(User user) {
-        emailCheck(user);
         users.put(user.getId(), user);
         return user;
     }
@@ -35,10 +29,10 @@ public class UserStorage {
         users.remove(id);
     }
 
-    private void emailCheck(User user) {
+    public void emailCheck(long id, String email) {
         for (Map.Entry<Long, User> entry : users.entrySet()) {
-            if (entry.getValue().getEmail().equals(user.getEmail()) && entry.getKey() != user.getId()) {
-                throw new ConflictException(String.format("Пользователь с email %s уже существует", user.getEmail()));
+            if (entry.getValue().getEmail().equals(email) && entry.getKey() != id) {
+                throw new ConflictException(String.format("Пользователь с email %s уже существует", email));
             }
         }
     }
