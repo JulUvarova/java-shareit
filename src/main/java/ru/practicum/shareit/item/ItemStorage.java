@@ -17,8 +17,8 @@ public class ItemStorage {
     }
 
     public Optional<Item> getItemById(long id) {
-        for(Map.Entry<Long, List<Item>> entry : userItemIndex.entrySet()){
-            for(Item item : entry.getValue()){
+        for (Map.Entry<Long, List<Item>> entry : userItemIndex.entrySet()) {
+            for (Item item : entry.getValue()) {
                 if (item.getId() == id) {
                     return Optional.of(item);
                 }
@@ -35,8 +35,8 @@ public class ItemStorage {
     public List<Item> searchItems(String query) {
         String findText = query.toLowerCase();
         List<Item> foundItems = new ArrayList<>();
-        for(Map.Entry<Long, List<Item>> entry : userItemIndex.entrySet()){
-            for(Item item : entry.getValue()){
+        for (Map.Entry<Long, List<Item>> entry : userItemIndex.entrySet()) {
+            for (Item item : entry.getValue()) {
                 if (item.getName().toLowerCase().contains(findText)
                         || item.getDescription().toLowerCase().contains(findText)
                         && item.getAvailable().equals(true)) {

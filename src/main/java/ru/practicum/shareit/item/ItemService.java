@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.user.UserStorage;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,10 +36,10 @@ public class ItemService {
             throw new NotFoundException(
                     String.format("Пользователь с id %d не являеться владельщем вещи с id %d", userId, itemId));
         }
-        if (item.getName() != null  && !item.getName().isBlank()) {
+        if (item.getName() != null && !item.getName().isBlank()) {
             expectedItem.setName(item.getName());
         }
-        if (item.getDescription() != null  && !item.getDescription().isBlank()) {
+        if (item.getDescription() != null && !item.getDescription().isBlank()) {
             expectedItem.setDescription(item.getDescription());
         }
         if (item.getAvailable() != null) {
