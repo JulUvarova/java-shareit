@@ -20,13 +20,16 @@ public class UserController {
     }
 
     @PostMapping
-    public UserDto createUser(@Validated(Marker.OnCreate.class) @RequestBody UserDto user) {
+    public UserDto createUser(@Validated(Marker.OnCreate.class)
+                                  @RequestBody UserDto user) {
         log.info("Получен запрос на создание пользователя");
         return userService.createUser(user);
     }
 
     @PatchMapping("/{userId}")
-    public UserDto updateUser(@PathVariable long userId, @Validated(Marker.OnUpdate.class) @RequestBody UserDto user) {
+    public UserDto updateUser(@PathVariable long userId,
+                              @Validated(Marker.OnUpdate.class)
+                              @RequestBody UserDto user) {
         log.info("Получен запрос на обновление пользователя с id {}", userId);
         return userService.updateUserById(userId, user);
     }

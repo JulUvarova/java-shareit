@@ -12,9 +12,12 @@ import javax.validation.constraints.NotBlank;
 @NoArgsConstructor
 @SuperBuilder
 public class UserDto {
+
     private long id;
+
     @NotBlank(groups = Marker.OnCreate.class, message = "Логин не может быть пустым")
     private String name;
+
     @NotBlank(groups = Marker.OnCreate.class, message = "Почта не может быть пустой")
     @Email(groups = {Marker.OnCreate.class, Marker.OnUpdate.class}, message = "Почта должна быть оформлена по правилам")
     private String email;

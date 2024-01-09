@@ -3,6 +3,10 @@ package ru.practicum.shareit.item;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.item.comment.CommentDtoRequest;
+import ru.practicum.shareit.item.comment.CommentDtoResponse;
+import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemDtoShort;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -20,22 +24,25 @@ public class ItemController {
     }
 
     @PostMapping
-    public ItemDto createItem(@RequestHeader(OWNER_ID) long userId, @Valid @RequestBody ItemDto item) {
+    public ItemDtoShort createItem(@RequestHeader(OWNER_ID) long userId,
+                                   @Valid @RequestBody ItemDtoShort item) {
         log.info("Получен запрос от пользователя с id {} на создание вещи", userId);
         return itemService.createItem(userId, item);
     }
 
     @PatchMapping("/{itemId}")
-    public ItemDto updateItem(@RequestHeader(OWNER_ID) long userId,
-                              @PathVariable long itemId, @RequestBody ItemDto item) {
+    public ItemDtoShort updateItem(@RequestHeader(OWNER_ID) long userId,
+                                   @PathVariable long itemId,
+                                   @RequestBody ItemDtoShort item) {
         log.info("Получен запрос от пользователя с id {} на обновление вещи", userId);
         return itemService.updateItem(userId, itemId, item);
     }
 
     @GetMapping("/{itemId}")
-    public ItemDto getItem(@PathVariable long itemId) {
-        log.info("Получен запрос на получение вещи с id {}", itemId);
-        return itemService.getItem(itemId);
+    public ItemDto getItem(@RequestHeader(OWNER_ID) long userId,
+                           @PathVariable long itemId) {
+        log.info("Получен запрос на получение вещи с id {} от пользователя {}", itemId, userId);
+        return itemService.getItem(itemId, userId);
     }
 
     @GetMapping
@@ -45,8 +52,16 @@ public class ItemController {
     }
 
     @GetMapping("/search")
-    public List<ItemDto> searchItems(@RequestParam String text) {
+    public List<ItemDtoShort> searchItems(@RequestParam String text) {
         log.info("Получен запрос на поиск '{}' среди вещей", text);
         return itemService.searchItems(text);
+    }
+
+    @PostMapping("/{itemId}/comment")
+    public CommentDtoResponse createComment(@PathVariable long itemId,
+                                            @RequestHeader(OWNER_ID) long userId,
+                                            @Valid @RequestBody CommentDtoRequest comment) {
+        log.info("Получен запрос на оставление комментария на вещь '{}'", itemId);
+        return itemService.createComment(itemId, userId, comment);
     }
 }
