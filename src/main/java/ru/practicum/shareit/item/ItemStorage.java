@@ -11,5 +11,5 @@ public interface ItemStorage extends JpaRepository<Item, Long> {
             " or upper(i.description) like upper(concat('%', ?1, '%'))) ")
     List<Item> search(String text);
 
-    List<Item> findAllItemsByOwner(long userId);
+    List<Item> findAllItemsByOwnerId(long userId);
 }

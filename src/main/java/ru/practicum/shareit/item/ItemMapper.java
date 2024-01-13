@@ -5,6 +5,7 @@ import ru.practicum.shareit.booking.dto.BookingForItemDto;
 import ru.practicum.shareit.item.comment.CommentDtoResponse;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemDtoShort;
+import ru.practicum.shareit.user.User;
 
 import java.util.List;
 
@@ -20,11 +21,11 @@ public class ItemMapper {
                 .build();
     }
 
-    public Item toItem(ItemDtoShort item, long userId) {
+    public Item toItem(ItemDtoShort item, User user) {
         return Item.builder()
                 .name(item.getName())
                 .description(item.getDescription())
-                .owner(userId)
+                .owner(user)
                 .available(item.getAvailable())
                 .request(null) // пока не нужно
                 .build();

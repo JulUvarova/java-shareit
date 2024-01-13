@@ -1,5 +1,6 @@
 package ru.practicum.shareit.booking;
 
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
@@ -8,33 +9,33 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface BookingStorage extends JpaRepository<Booking, Long> {
-    List<Booking> findAllByItemOwnerOrderByStartDesc(long owner);
+    List<Booking> findAllByItemOwnerId(long owner, Sort sort);
 
-    List<Booking> findAllByBookerIdOrderByStartDesc(long bookerId);
+    List<Booking> findAllByBookerId(long bookerId, Sort sort);
 
-    List<Booking> findAllByBookerIdAndStartBeforeAndEndAfterOrderByStartDesc(long bookerId, LocalDateTime start, LocalDateTime end);
+    List<Booking> findAllByBookerIdAndStartBeforeAndEndAfter(long bookerId, LocalDateTime start, LocalDateTime end, Sort sort);
 
-    List<Booking> findAllByBookerIdAndEndBeforeOrderByStartDesc(long bookerId, LocalDateTime end);
+    List<Booking> findAllByBookerIdAndEndBefore(long bookerId, LocalDateTime end, Sort sort);
 
-    List<Booking> findAllByBookerIdAndStartAfterOrderByStartDesc(long bookerId, LocalDateTime start);
+    List<Booking> findAllByBookerIdAndStartAfter(long bookerId, LocalDateTime start, Sort sort);
 
-    List<Booking> findAllByBookerIdAndStatusOrderByStartDesc(long bookerId, Status status);
+    List<Booking> findAllByBookerIdAndStatus(long bookerId, BookingStatus status, Sort sort);
 
-    List<Booking> findAllByItemOwnerAndStartBeforeAndEndAfterOrderByStartDesc(long owner, LocalDateTime start, LocalDateTime end);
+    List<Booking> findAllByItemOwnerIdAndStartBeforeAndEndAfter(long owner, LocalDateTime start, LocalDateTime end, Sort sort);
 
-    List<Booking> findAllByItemOwnerAndEndBeforeOrderByStartDesc(long owner, LocalDateTime end);
+    List<Booking> findAllByItemOwnerIdAndEndBefore(long owner, LocalDateTime end, Sort sort);
 
-    List<Booking> findAllByItemOwnerAndStartAfterOrderByStartDesc(long owner, LocalDateTime start);
+    List<Booking> findAllByItemOwnerIdAndStartAfter(long owner, LocalDateTime start, Sort sort);
 
-    List<Booking> findAllByItemOwnerAndStatusOrderByStartDesc(long owner, Status status);
+    List<Booking> findAllByItemOwnerIdAndStatus(long owner, BookingStatus status, Sort sort);
 
-    Optional<Booking> findFirst1ByItemIdAndBookerIdAndEndBeforeOrderByEndDesc(long itemId, long bookerId, LocalDateTime end);
+    Optional<Booking> findFirst1ByItemIdAndStartAfterAndStatus(long itemId, LocalDateTime start, BookingStatus status, Sort sort);
 
-    Optional<Booking> findFirst1ByItemIdAndStartAfterAndStatusOrderByStartAsc(long itemId, LocalDateTime start, Status status);
+    Optional<Booking> findFirst1ByItemIdAndStartBeforeAndStatus(long itemId, LocalDateTime end, BookingStatus status, Sort sort);
 
-    Optional<Booking> findFirst1ByItemIdAndStartBeforeAndStatusOrderByStartDesc(long itemId, LocalDateTime end, Status status);
+    List<Booking> findAllByItemIdInAndStatusAndEndBefore(Set<Long> itemId, BookingStatus status, LocalDateTime end, Sort sort);
 
-    List<Booking> findAllByItemIdInAndStatusAndEndBefore(Set<Long> itemId, Status status, LocalDateTime end);
+    List<Booking> findAllByItemIdInAndStatusAndStartAfter(Set<Long> itemId, BookingStatus status, LocalDateTime start, Sort sort);
 
-    List<Booking> findAllByItemIdInAndStatusAndStartAfter(Set<Long> itemId, Status status, LocalDateTime start);
+    boolean existsByItemIdAndBookerIdAndEndBefore(long itemId, long userId, LocalDateTime now);
 }

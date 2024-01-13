@@ -2,6 +2,7 @@ package ru.practicum.shareit.booking;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDtoRequest;
@@ -14,12 +15,14 @@ import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserStorage;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class BookingService {
+    private static final Sort SORT_BY_START_DESC = Sort.by(Sort.Direction.DESC, "start");
     private final BookingStorage bookingStorage;
     private final ItemStorage itemStorage;
     private final UserStorage userStorage;
@@ -33,7 +36,6 @@ public class BookingService {
 
     @Transactional
     public BookingDtoResponse createBooking(long userId, BookingDtoRequest bookingDto) {
-        checkBookingTime(bookingDto);
         User booker = checkUserId(userId);
         Item item = checkItemId(bookingDto.getItemId());
 
@@ -41,11 +43,11 @@ public class BookingService {
             throw new BookingStatusException(String.format("Вещь с id %d не доступна для бронирования", item.getId()));
         }
 
-        if (item.getOwner() == userId) {
+        if (item.getOwner().getId() == userId) {
             throw new NotFoundException("Владелец не может бронировать свои вещи");
         }
 
-        Booking booking = BookingMapper.toBooking(bookingDto, item, booker, Status.WAITING);
+        Booking booking = BookingMapper.toBooking(bookingDto, item, booker, BookingStatus.WAITING);
         bookingStorage.save(booking);
         log.info("Пользователь с id {} забронировал вещь с id {}", userId, bookingDto.getItemId());
         return BookingMapper.toBookingDtoResponse(booking);
@@ -55,17 +57,17 @@ public class BookingService {
     public BookingDtoResponse approvedBooking(long userId, boolean approved, long bookingId) {
         Booking booking = checkBookingId(bookingId);
 
-        if (booking.getItem().getOwner() != userId) {
+        if (booking.getItem().getOwner().getId() != userId) {
             throw new NotFoundException(String.format(
                     "Пользователь с id %d не является владельцем вещи %d", userId, booking.getItem().getId()));
         }
-        if (!booking.getStatus().equals(Status.WAITING)) {
+        if (!booking.getStatus().equals(BookingStatus.WAITING)) {
             throw new BookingStatusException(String.format("Бронирование уже %s", booking.getStatus()));
         }
         if (approved) {
-            booking.setStatus(Status.APPROVED);
+            booking.setStatus(BookingStatus.APPROVED);
         } else {
-            booking.setStatus(Status.REJECTED);
+            booking.setStatus(BookingStatus.REJECTED);
         }
         Booking savedBooking = bookingStorage.save(booking);
         log.info("Владелец изменил статус бронирования с id {} на {}", bookingId, approved);
@@ -75,7 +77,7 @@ public class BookingService {
     @Transactional(readOnly = true)
     public BookingDtoResponse getBookingById(long userId, long bookingId) {
         Booking booking = checkBookingId(bookingId);
-        if (booking.getItem().getOwner() != userId && booking.getBooker().getId() != userId) {
+        if (booking.getItem().getOwner().getId() != userId && booking.getBooker().getId() != userId) {
             throw new NotFoundException(String.format(
                     "Пользователь с id %d не относится к этому бронированию", userId));
         }
@@ -84,26 +86,58 @@ public class BookingService {
     }
 
     @Transactional(readOnly = true)
-    public List<BookingDtoResponse> getSortBookingByUser(long userId, String state) {
+    public List<BookingDtoResponse> getSortBookingByUser(long userId, String stateStr) {
+        BookingStateStatus state = BookingStateStatus.toState(stateStr);
         checkUserId(userId);
-        List<Booking> bookings;
-        if (state.equals("ALL")) {
-            bookings = bookingStorage.findAllByBookerIdOrderByStartDesc(userId);
-        } else {
-            bookings = getStateForBooker(state, userId);
+        List<Booking> bookings = new ArrayList<>();
+        switch (state) {
+            case ALL:
+                bookings = bookingStorage.findAllByBookerId(userId, SORT_BY_START_DESC);
+                break;
+            case CURRENT:
+                bookings = bookingStorage.findAllByBookerIdAndStartBeforeAndEndAfter(userId, LocalDateTime.now(), LocalDateTime.now(), SORT_BY_START_DESC);
+                break;
+            case PAST:
+                bookings = bookingStorage.findAllByBookerIdAndEndBefore(userId, LocalDateTime.now(), SORT_BY_START_DESC);
+                break;
+            case FUTURE:
+                bookings = bookingStorage.findAllByBookerIdAndStartAfter(userId, LocalDateTime.now(), SORT_BY_START_DESC);
+                break;
+            case WAITING:
+                bookings = bookingStorage.findAllByBookerIdAndStatus(userId, BookingStatus.WAITING, SORT_BY_START_DESC);
+                break;
+            case REJECTED:
+                bookings = bookingStorage.findAllByBookerIdAndStatus(userId, BookingStatus.REJECTED, SORT_BY_START_DESC);
+                break;
         }
         log.info("Получен список бронирований из {} элементов", bookings.size());
         return bookings.stream().map(BookingMapper::toBookingDtoResponse).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public List<BookingDtoResponse> getSortBookingByOwner(long userId, String state) {
+    public List<BookingDtoResponse> getSortBookingByOwner(long userId, String stateStr) {
+        BookingStateStatus state = BookingStateStatus.toState(stateStr);
         checkUserId(userId);
-        List<Booking> bookings;
-        if (state.equals("ALL")) {
-            bookings = bookingStorage.findAllByItemOwnerOrderByStartDesc(userId);
-        } else {
-            bookings = getStateForOwner(state, userId);
+        List<Booking> bookings = new ArrayList<>();
+        switch (state) {
+            case ALL:
+                bookings = bookingStorage.findAllByItemOwnerId(userId, SORT_BY_START_DESC);
+                break;
+            case CURRENT:
+                bookings = bookingStorage.findAllByItemOwnerIdAndStartBeforeAndEndAfter(userId, LocalDateTime.now(), LocalDateTime.now(), SORT_BY_START_DESC);
+                break;
+            case PAST:
+                bookings = bookingStorage.findAllByItemOwnerIdAndEndBefore(userId, LocalDateTime.now(), SORT_BY_START_DESC);
+                break;
+            case FUTURE:
+                bookings = bookingStorage.findAllByItemOwnerIdAndStartAfter(userId, LocalDateTime.now(), SORT_BY_START_DESC);
+                break;
+            case WAITING:
+                bookings = bookingStorage.findAllByItemOwnerIdAndStatus(userId, BookingStatus.WAITING, SORT_BY_START_DESC);
+                break;
+            case REJECTED:
+                bookings = bookingStorage.findAllByItemOwnerIdAndStatus(userId, BookingStatus.REJECTED, SORT_BY_START_DESC);
+                break;
         }
         log.info("Получен список бронирований из {} элементов", bookings.size());
         return bookings.stream().map(BookingMapper::toBookingDtoResponse).collect(Collectors.toList());
@@ -124,57 +158,4 @@ public class BookingService {
                 new NotFoundException(String.format("Бронирование с id %d не существует", bookingId)));
     }
 
-    private void checkBookingTime(BookingDtoRequest booking) {
-        if (booking.getEnd().isBefore(booking.getStart()) || booking.getStart().equals(booking.getEnd())) {
-            throw new BookingStatusException("Ошибка во времени бронирования");
-        }
-    }
-
-    private List<Booking> getStateForBooker(String state, long userId) {
-        List<Booking> bookings;
-        switch (state) {
-            case "CURRENT":
-                bookings = bookingStorage.findAllByBookerIdAndStartBeforeAndEndAfterOrderByStartDesc(userId, LocalDateTime.now(), LocalDateTime.now());
-                break;
-            case "PAST":
-                bookings = bookingStorage.findAllByBookerIdAndEndBeforeOrderByStartDesc(userId, LocalDateTime.now());
-                break;
-            case "FUTURE":
-                bookings = bookingStorage.findAllByBookerIdAndStartAfterOrderByStartDesc(userId, LocalDateTime.now());
-                break;
-            case "WAITING":
-                bookings = bookingStorage.findAllByBookerIdAndStatusOrderByStartDesc(userId, Status.WAITING);
-                break;
-            case "REJECTED":
-                bookings = bookingStorage.findAllByBookerIdAndStatusOrderByStartDesc(userId, Status.REJECTED);
-                break;
-            default:
-                throw new BookingStatusException(String.format("Unknown state: %s", state));
-        }
-        return bookings;
-    }
-
-    private List<Booking> getStateForOwner(String state, long userId) {
-        List<Booking> bookings;
-        switch (state) {
-            case "CURRENT":
-                bookings = bookingStorage.findAllByItemOwnerAndStartBeforeAndEndAfterOrderByStartDesc(userId, LocalDateTime.now(), LocalDateTime.now());
-                break;
-            case "PAST":
-                bookings = bookingStorage.findAllByItemOwnerAndEndBeforeOrderByStartDesc(userId, LocalDateTime.now());
-                break;
-            case "FUTURE":
-                bookings = bookingStorage.findAllByItemOwnerAndStartAfterOrderByStartDesc(userId, LocalDateTime.now());
-                break;
-            case "WAITING":
-                bookings = bookingStorage.findAllByItemOwnerAndStatusOrderByStartDesc(userId, Status.WAITING);
-                break;
-            case "REJECTED":
-                bookings = bookingStorage.findAllByItemOwnerAndStatusOrderByStartDesc(userId, Status.REJECTED);
-                break;
-            default:
-                throw new BookingStatusException(String.format("Unknown state: %s", state));
-        }
-        return bookings;
-    }
 }

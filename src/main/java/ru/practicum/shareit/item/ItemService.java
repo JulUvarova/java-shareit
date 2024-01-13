@@ -2,12 +2,13 @@ package ru.practicum.shareit.item;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.Booking;
 import ru.practicum.shareit.booking.BookingMapper;
 import ru.practicum.shareit.booking.BookingStorage;
-import ru.practicum.shareit.booking.Status;
+import ru.practicum.shareit.booking.BookingStatus;
 import ru.practicum.shareit.exception.BookingStatusException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.comment.*;
@@ -28,6 +29,7 @@ public class ItemService {
     private final UserStorage userStorage;
     private final BookingStorage bookingStorage;
     private final CommentStorage commentStorage;
+    private static final Sort SORT_BY_START_DESC = Sort.by(Sort.Direction.DESC, "start");
 
     @Autowired
     public ItemService(ItemStorage itemStorage, UserStorage userStorage,
@@ -40,8 +42,8 @@ public class ItemService {
 
     @Transactional
     public ItemDtoShort createItem(long userId, ItemDtoShort item) {
-        checkUserId(userId);
-        Item createdItem = itemStorage.save(ItemMapper.toItem(item, userId));
+        User user = checkUserId(userId);
+        Item createdItem = itemStorage.save(ItemMapper.toItem(item, user));
         log.info("Пользователь с id {} создал вещь {}", userId, createdItem);
         return ItemMapper.toItemDtoShort(createdItem);
     }
@@ -49,7 +51,7 @@ public class ItemService {
     @Transactional
     public ItemDtoShort updateItem(long userId, long itemId, ItemDtoShort item) {
         Item expectedItem = checkItemId(itemId);
-        if (expectedItem.getOwner() != userId) {
+        if (expectedItem.getOwner().getId() != userId) {
             throw new NotFoundException(
                     String.format("Пользователь с id %d не являеться владельщем вещи с id %d", userId, itemId));
         }
@@ -72,12 +74,12 @@ public class ItemService {
         Item item = checkItemId(itemId);
         List<CommentDtoResponse> comments = commentStorage.findAllByItemId(itemId).stream()
                 .map(CommentMapper::toCommentDtoResponse).collect(Collectors.toList());
-        if (item.getOwner() == userId) {
+        if (item.getOwner().getId() == userId) {
             LocalDateTime now = LocalDateTime.now();
-            Booking nextBooking = bookingStorage.findFirst1ByItemIdAndStartAfterAndStatusOrderByStartAsc(itemId,
-                    now, Status.APPROVED).orElse(null);
-            Booking lastBooking = bookingStorage.findFirst1ByItemIdAndStartBeforeAndStatusOrderByStartDesc(itemId,
-                    now, Status.APPROVED).orElse(null);
+            Booking nextBooking = bookingStorage.findFirst1ByItemIdAndStartAfterAndStatus(itemId,
+                    now, BookingStatus.APPROVED, Sort.by(Sort.Direction.ASC, "start")).orElse(null);
+            Booking lastBooking = bookingStorage.findFirst1ByItemIdAndStartBeforeAndStatus(itemId,
+                    now, BookingStatus.APPROVED, SORT_BY_START_DESC).orElse(null);
 
             log.info("Получена вещь с id {}", itemId);
             return ItemMapper.toItemDto(item, BookingMapper.toBookingForItemDto(lastBooking),
@@ -90,15 +92,15 @@ public class ItemService {
 
     @Transactional(readOnly = true)
     public List<ItemDto> getItemsByUser(long userId) {
-        Map<Long, Item> itemMap = itemStorage.findAllItemsByOwner(userId)
+        Map<Long, Item> itemMap = itemStorage.findAllItemsByOwnerId(userId)
                 .stream()
                 .collect(Collectors.toMap(Item::getId, Function.identity()));
 
         LocalDateTime now = LocalDateTime.now();
-        Map<Long, List<Booking>> nextBookings = bookingStorage.findAllByItemIdInAndStatusAndStartAfter(itemMap.keySet(), Status.APPROVED, now)
+        Map<Long, List<Booking>> nextBookings = bookingStorage.findAllByItemIdInAndStatusAndStartAfter(itemMap.keySet(), BookingStatus.APPROVED, now, SORT_BY_START_DESC)
                 .stream()
                 .collect(Collectors.groupingBy(b -> b.getItem().getId()));
-        Map<Long, List<Booking>> lastBookings = bookingStorage.findAllByItemIdInAndStatusAndEndBefore(itemMap.keySet(), Status.APPROVED, now)
+        Map<Long, List<Booking>> lastBookings = bookingStorage.findAllByItemIdInAndStatusAndEndBefore(itemMap.keySet(), BookingStatus.APPROVED, now, SORT_BY_START_DESC)
                 .stream()
                 .collect(Collectors.groupingBy(b -> b.getItem().getId()));
 
@@ -108,7 +110,9 @@ public class ItemService {
 
         List<ItemDto> itemsByUser = itemMap.values()
                 .stream()
-                .map(i -> addBookingsAndComments(i, lastBookings.get(i.getId()), nextBookings.get(i.getId()), comments.get(i.getId())))
+                .map(i -> addBookingsAndComments(i, lastBookings.getOrDefault(i.getId(), List.of()),
+                        nextBookings.getOrDefault(i.getId(), List.of()),
+                        comments.getOrDefault(i.getId(), List.of())))
                 .collect(Collectors.toList());
 
         log.info("Получен список из {} вещей для пользователя с id {}", itemsByUser.size(), userId);
@@ -130,8 +134,9 @@ public class ItemService {
     @Transactional
     public CommentDtoResponse createComment(long itemId, long userId, CommentDtoRequest commentDto) {
         User user = checkUserId(userId);
-        bookingStorage.findFirst1ByItemIdAndBookerIdAndEndBeforeOrderByEndDesc(itemId, userId, LocalDateTime.now())
-                .orElseThrow(() -> new BookingStatusException("Нельзя оставить коммантарий"));
+        if (!bookingStorage.existsByItemIdAndBookerIdAndEndBefore(itemId, userId, LocalDateTime.now())) {
+            throw new BookingStatusException("Нельзя оставить коммантарий");
+        }
         Comment comment = commentStorage.save(CommentMapper.toComment(commentDto, user, itemId));
         log.info("Получен комментарий от пользователя {}", userId);
         return CommentMapper.toCommentDtoResponse(comment);
@@ -148,21 +153,12 @@ public class ItemService {
     }
 
     private ItemDto addBookingsAndComments(Item item, List<Booking> last, List<Booking> next, List<Comment> comments) {
-        Booking findedLast = null;
-        Booking findedNext = null;
-        List<CommentDtoResponse> commentList = null;
-        if (last != null) {
-            findedLast = last.stream().max(Comparator.comparing(Booking::getEnd)).orElse(null);
-        }
-        if (next != null) {
-            findedNext = next.stream().min(Comparator.comparing(Booking::getStart)).orElse(null);
-        }
-        if (comments != null) {
-            commentList = comments.stream().map(CommentMapper::toCommentDtoResponse).collect(Collectors.toList());
-        }
+        Booking foundLast = last.stream().max(Comparator.comparing(Booking::getEnd)).orElse(null);
+        Booking foundNext = next.stream().min(Comparator.comparing(Booking::getStart)).orElse(null);
+        List<CommentDtoResponse> commentList = comments.stream().map(CommentMapper::toCommentDtoResponse).collect(Collectors.toList());
 
-        return ItemMapper.toItemDto(item, BookingMapper.toBookingForItemDto(findedLast),
-                BookingMapper.toBookingForItemDto(findedNext), commentList);
+        return ItemMapper.toItemDto(item, BookingMapper.toBookingForItemDto(foundLast),
+                BookingMapper.toBookingForItemDto(foundNext), commentList);
     }
 
 }

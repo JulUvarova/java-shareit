@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import ru.practicum.shareit.user.User;
 
 import javax.persistence.*;
 import java.util.Objects;
@@ -31,8 +32,10 @@ public class Item {
     @Column(name = "is_available", nullable = false)
     private Boolean available;
 
-    @Column(name = "owner_id", nullable = false)
-    private Long owner;
+    @ManyToOne
+    @JoinColumn(name = "owner_id")
+    @ToString.Exclude
+    private User owner;
 
     @Column(name = "request_id")
     private Long request;

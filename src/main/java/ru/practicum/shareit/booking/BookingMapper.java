@@ -20,7 +20,7 @@ public class BookingMapper {
                 .build();
     }
 
-    public Booking toBooking(BookingDtoRequest bookingDto, Item item, User user, Status status) {
+    public Booking toBooking(BookingDtoRequest bookingDto, Item item, User user, BookingStatus status) {
         return Booking.builder()
                 .start(bookingDto.getStart())
                 .end(bookingDto.getEnd())

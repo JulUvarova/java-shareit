@@ -40,7 +40,7 @@ public class Booking {
 
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
-    private Status status;
+    private BookingStatus status;
 
     @Override
     public boolean equals(Object o) {

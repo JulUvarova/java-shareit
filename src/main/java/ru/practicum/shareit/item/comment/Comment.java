@@ -8,6 +8,7 @@ import lombok.experimental.SuperBuilder;
 import ru.practicum.shareit.user.User;
 
 import javax.persistence.*;
+import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -24,6 +25,7 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Size(min = 1, max = 512)
     @Column(name = "text", nullable = false)
     private String text;
 
