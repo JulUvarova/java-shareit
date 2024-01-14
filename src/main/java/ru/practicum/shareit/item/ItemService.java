@@ -2,13 +2,9 @@ package ru.practicum.shareit.item;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.shareit.booking.Booking;
-import ru.practicum.shareit.booking.BookingMapper;
 import ru.practicum.shareit.booking.BookingStorage;
-import ru.practicum.shareit.booking.BookingStatus;
 import ru.practicum.shareit.exception.BookingStatusException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.comment.*;
@@ -29,7 +25,6 @@ public class ItemService {
     private final UserStorage userStorage;
     private final BookingStorage bookingStorage;
     private final CommentStorage commentStorage;
-    private static final Sort SORT_BY_START_DESC = Sort.by(Sort.Direction.DESC, "start");
 
     @Autowired
     public ItemService(ItemStorage itemStorage, UserStorage userStorage,
@@ -72,22 +67,16 @@ public class ItemService {
     @Transactional(readOnly = true)
     public ItemDto getItem(long itemId, long userId) {
         Item item = checkItemId(itemId);
-        List<CommentDtoResponse> comments = commentStorage.findAllByItemId(itemId).stream()
-                .map(CommentMapper::toCommentDtoResponse).collect(Collectors.toList());
+        List<CommentDtoResponse> comments = commentStorage.findAllByItemId(itemId)
+                .stream().map(CommentMapper::toCommentDtoResponse).collect(Collectors.toList());
         if (item.getOwner().getId() == userId) {
-            LocalDateTime now = LocalDateTime.now();
-            Booking nextBooking = bookingStorage.findFirst1ByItemIdAndStartAfterAndStatus(itemId,
-                    now, BookingStatus.APPROVED, Sort.by(Sort.Direction.ASC, "start")).orElse(null);
-            Booking lastBooking = bookingStorage.findFirst1ByItemIdAndStartBeforeAndStatus(itemId,
-                    now, BookingStatus.APPROVED, SORT_BY_START_DESC).orElse(null);
-
             log.info("Получена вещь с id {}", itemId);
-            return ItemMapper.toItemDto(item, BookingMapper.toBookingForItemDto(lastBooking),
-                    BookingMapper.toBookingForItemDto(nextBooking),
-                    comments);
+            return ItemMapper.toItemDto(item, comments);
         }
+        item.setLastBooking(null);
+        item.setNextBooking(null);
         log.info("Получена вещь с id {}", itemId);
-        return ItemMapper.toItemDto(item, null, null, comments);
+        return ItemMapper.toItemDto(item, comments);
     }
 
     @Transactional(readOnly = true)
@@ -96,23 +85,13 @@ public class ItemService {
                 .stream()
                 .collect(Collectors.toMap(Item::getId, Function.identity()));
 
-        LocalDateTime now = LocalDateTime.now();
-        Map<Long, List<Booking>> nextBookings = bookingStorage.findAllByItemIdInAndStatusAndStartAfter(itemMap.keySet(), BookingStatus.APPROVED, now, SORT_BY_START_DESC)
-                .stream()
-                .collect(Collectors.groupingBy(b -> b.getItem().getId()));
-        Map<Long, List<Booking>> lastBookings = bookingStorage.findAllByItemIdInAndStatusAndEndBefore(itemMap.keySet(), BookingStatus.APPROVED, now, SORT_BY_START_DESC)
-                .stream()
-                .collect(Collectors.groupingBy(b -> b.getItem().getId()));
-
         Map<Long, List<Comment>> comments = commentStorage.findAllByItemIdIn(itemMap.keySet())
                 .stream()
                 .collect(Collectors.groupingBy(Comment::getItemId));
 
         List<ItemDto> itemsByUser = itemMap.values()
                 .stream()
-                .map(i -> addBookingsAndComments(i, lastBookings.getOrDefault(i.getId(), List.of()),
-                        nextBookings.getOrDefault(i.getId(), List.of()),
-                        comments.getOrDefault(i.getId(), List.of())))
+                .map(i -> addComments(i, comments.getOrDefault(i.getId(), List.of())))
                 .collect(Collectors.toList());
 
         log.info("Получен список из {} вещей для пользователя с id {}", itemsByUser.size(), userId);
@@ -152,13 +131,9 @@ public class ItemService {
                 new NotFoundException(String.format("Вещь с id %d не существует", itemId)));
     }
 
-    private ItemDto addBookingsAndComments(Item item, List<Booking> last, List<Booking> next, List<Comment> comments) {
-        Booking foundLast = last.stream().max(Comparator.comparing(Booking::getEnd)).orElse(null);
-        Booking foundNext = next.stream().min(Comparator.comparing(Booking::getStart)).orElse(null);
-        List<CommentDtoResponse> commentList = comments.stream().map(CommentMapper::toCommentDtoResponse).collect(Collectors.toList());
-
-        return ItemMapper.toItemDto(item, BookingMapper.toBookingForItemDto(foundLast),
-                BookingMapper.toBookingForItemDto(foundNext), commentList);
+    private ItemDto addComments(Item item, List<Comment> comments) {
+        List<CommentDtoResponse> commentList = comments
+                .stream().map(CommentMapper::toCommentDtoResponse).collect(Collectors.toList());
+        return ItemMapper.toItemDto(item, commentList);
     }
-
 }
