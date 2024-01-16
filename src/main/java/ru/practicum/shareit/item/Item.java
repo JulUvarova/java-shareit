@@ -56,7 +56,7 @@ public class Item {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinFormula("(SELECT b.id FROM bookings b " +
             " WHERE b.item_id = id " +
-            " AND b.start_date < LOCALTIMESTAMP(2) " +
+            " AND b.start_date <= LOCALTIMESTAMP(2) " +
             " AND b.status = 'APPROVED' " +
             " ORDER BY b.end_date DESC LIMIT 1)")
     private Booking lastBooking;
