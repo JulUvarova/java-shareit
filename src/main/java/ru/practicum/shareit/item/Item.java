@@ -1,6 +1,5 @@
 package ru.practicum.shareit.item;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -43,7 +42,6 @@ public class Item {
     @Column(name = "request_id")
     private Long request;
 
-    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinFormula("(SELECT b.id FROM bookings b " +
             " WHERE b.item_id = id " +
@@ -52,7 +50,6 @@ public class Item {
             " ORDER BY b.start_date ASC LIMIT 1)")
     private Booking nextBooking;
 
-    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinFormula("(SELECT b.id FROM bookings b " +
             " WHERE b.item_id = id " +
