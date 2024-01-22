@@ -3,11 +3,19 @@ package ru.practicum.shareit.item;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.booking.BookingStorage;
+import ru.practicum.shareit.exception.BookingStatusException;
 import ru.practicum.shareit.exception.NotFoundException;
+import ru.practicum.shareit.item.comment.*;
+import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemDtoShort;
+import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserStorage;
 
-import java.util.Collections;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -15,24 +23,30 @@ import java.util.stream.Collectors;
 public class ItemService {
     private final ItemStorage itemStorage;
     private final UserStorage userStorage;
+    private final BookingStorage bookingStorage;
+    private final CommentStorage commentStorage;
 
     @Autowired
-    public ItemService(ItemStorage itemStorage, UserStorage userStorage) {
+    public ItemService(ItemStorage itemStorage, UserStorage userStorage,
+                       BookingStorage bookingStorage, CommentStorage commentStorage) {
         this.itemStorage = itemStorage;
         this.userStorage = userStorage;
+        this.bookingStorage = bookingStorage;
+        this.commentStorage = commentStorage;
     }
 
-    public ItemDto createItem(long userId, ItemDto item) {
-        checkUserId(userId);
-        Item createdItem = itemStorage.addItem(userId, ItemMapper.toItem(item, userId));
+    @Transactional
+    public ItemDtoShort createItem(long userId, ItemDtoShort item) {
+        User user = checkUserId(userId);
+        Item createdItem = itemStorage.save(ItemMapper.toItem(item, user));
         log.info("Пользователь с id {} создал вещь {}", userId, createdItem);
-        return ItemMapper.toItemDto(createdItem);
+        return ItemMapper.toItemDtoShort(createdItem);
     }
 
-    public ItemDto updateItem(long userId, long itemId, ItemDto item) {
-        checkUserId(userId);
+    @Transactional
+    public ItemDtoShort updateItem(long userId, long itemId, ItemDtoShort item) {
         Item expectedItem = checkItemId(itemId);
-        if (expectedItem.getOwner() != userId) {
+        if (expectedItem.getOwner().getId() != userId) {
             throw new NotFoundException(
                     String.format("Пользователь с id %d не являеться владельщем вещи с id %d", userId, itemId));
         }
@@ -45,42 +59,81 @@ public class ItemService {
         if (item.getAvailable() != null) {
             expectedItem.setAvailable(item.getAvailable());
         }
+        itemStorage.save(expectedItem);
         log.info("Пользователь с id {} обновил вещь с id {}", userId, itemId);
-        return ItemMapper.toItemDto(expectedItem);
+        return ItemMapper.toItemDtoShort(expectedItem);
     }
 
-    public ItemDto getItem(long itemId) {
-        Item foundItem = checkItemId(itemId);
+    @Transactional(readOnly = true)
+    public ItemDto getItem(long itemId, long userId) {
+        Item item = checkItemId(itemId);
+        List<CommentDtoResponse> comments = commentStorage.findAllByItemId(itemId)
+                .stream().map(CommentMapper::toCommentDtoResponse).collect(Collectors.toList());
+        if (item.getOwner().getId() == userId) {
+            log.info("Получена вещь с id {}", itemId);
+            return ItemMapper.toItemDto(item, comments);
+        }
+        item.setLastBooking(null);
+        item.setNextBooking(null);
         log.info("Получена вещь с id {}", itemId);
-        return ItemMapper.toItemDto(foundItem);
+        return ItemMapper.toItemDto(item, comments);
     }
 
+    @Transactional(readOnly = true)
     public List<ItemDto> getItemsByUser(long userId) {
-        checkUserId(userId);
-        List<ItemDto> itemsByUser = itemStorage.getItemsByUserId(userId).stream()
-                .map(ItemMapper::toItemDto).collect(Collectors.toList());
+        Map<Long, Item> itemMap = itemStorage.findAllItemsByOwnerId(userId)
+                .stream()
+                .collect(Collectors.toMap(Item::getId, Function.identity()));
+
+        Map<Long, List<Comment>> comments = commentStorage.findAllByItemIdIn(itemMap.keySet())
+                .stream()
+                .collect(Collectors.groupingBy(Comment::getItemId));
+
+        List<ItemDto> itemsByUser = itemMap.values()
+                .stream()
+                .map(i -> addComments(i, comments.getOrDefault(i.getId(), List.of())))
+                .collect(Collectors.toList());
+
         log.info("Получен список из {} вещей для пользователя с id {}", itemsByUser.size(), userId);
         return itemsByUser;
     }
 
-    public List<ItemDto> searchItems(String query) {
+    @Transactional(readOnly = true)
+    public List<ItemDtoShort> searchItems(String query) {
         if (query.isBlank()) {
             log.info("Получен список из 0 вещей по запросу '{}'", query);
             return Collections.emptyList();
         }
-        List<ItemDto> foundItems = itemStorage.searchItems(query).stream()
-                .map(ItemMapper::toItemDto).collect(Collectors.toList());
+        List<ItemDtoShort> foundItems = itemStorage.search(query).stream()
+                .map(ItemMapper::toItemDtoShort).collect(Collectors.toList());
         log.info("Получен список из {} вещей по запросу '{}'", foundItems.size(), query);
         return foundItems;
     }
 
-    private void checkUserId(long userId) {
-        userStorage.getUserById(userId).orElseThrow(() ->
+    @Transactional
+    public CommentDtoResponse createComment(long itemId, long userId, CommentDtoRequest commentDto) {
+        User user = checkUserId(userId);
+        if (!bookingStorage.existsByItemIdAndBookerIdAndEndBefore(itemId, userId, LocalDateTime.now())) {
+            throw new BookingStatusException("Нельзя оставить коммантарий");
+        }
+        Comment comment = commentStorage.save(CommentMapper.toComment(commentDto, user, itemId));
+        log.info("Получен комментарий от пользователя {}", userId);
+        return CommentMapper.toCommentDtoResponse(comment);
+    }
+
+    private User checkUserId(long userId) {
+        return userStorage.findById(userId).orElseThrow(() ->
                 new NotFoundException(String.format("Пользователь с id %d не существует", userId)));
     }
 
     private Item checkItemId(long itemId) {
-        return itemStorage.getItemById(itemId).orElseThrow(() ->
+        return itemStorage.findById(itemId).orElseThrow(() ->
                 new NotFoundException(String.format("Вещь с id %d не существует", itemId)));
+    }
+
+    private ItemDto addComments(Item item, List<Comment> comments) {
+        List<CommentDtoResponse> commentList = comments
+                .stream().map(CommentMapper::toCommentDtoResponse).collect(Collectors.toList());
+        return ItemMapper.toItemDto(item, commentList);
     }
 }

@@ -42,6 +42,14 @@ public class ExceptionApiHandler {
         return new ErrorMessage(message, ex.getCause(), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(BookingStatusException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorMessage handleBookingException(BookingStatusException ex) {
+        String message = ex.getMessage();
+        log.info("Получен статус 400: {}, {}", ex.getMessage(), ex.getStackTrace());
+        return new ErrorMessage(message, ex.getCause(), HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(Throwable.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorMessage handleUnhandledException(Throwable ex) {
