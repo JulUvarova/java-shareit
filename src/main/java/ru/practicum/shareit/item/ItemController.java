@@ -12,11 +12,14 @@ import ru.practicum.shareit.item.dto.ItemDtoShort;
 import ru.practicum.shareit.validation.Marker;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Positive;
+import javax.validation.constraints.PositiveOrZero;
 import java.util.List;
 
 @Slf4j
 @RestController
 @RequestMapping("/items")
+@Validated
 public class ItemController {
     private final ItemService itemService;
 
@@ -48,15 +51,19 @@ public class ItemController {
     }
 
     @GetMapping
-    public List<ItemDto> getItemsByUser(@RequestHeader(Constant.OWNER_ID) long userId) {
+    public List<ItemDto> getItemsByUser(@RequestHeader(Constant.OWNER_ID) long userId,
+                                        @RequestParam(name = "from", defaultValue = "0", required = false) @PositiveOrZero Integer from,
+                                        @RequestParam(name = "size", defaultValue = "5", required = false) @Positive Integer size) {
         log.info("Получен запрос от пользователя с id {} на получение списка его вещей", userId);
-        return itemService.getItemsByUser(userId);
+        return itemService.getItemsByUser(userId, from, size);
     }
 
     @GetMapping("/search")
-    public List<ItemDtoShort> searchItems(@RequestParam String text) {
+            public List<ItemDtoShort> searchItems(@RequestParam String text,
+                                                  @RequestParam(name = "from", defaultValue = "0", required = false) @PositiveOrZero Integer from,
+                                                  @RequestParam(name = "size", defaultValue = "5", required = false) @Positive Integer size) {
         log.info("Получен запрос на поиск '{}' среди вещей", text);
-        return itemService.searchItems(text);
+        return itemService.searchItems(text, from, size);
     }
 
     @PostMapping("/{itemId}/comment")

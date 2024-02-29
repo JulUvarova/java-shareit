@@ -10,6 +10,9 @@ import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.comment.*;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemDtoShort;
+import ru.practicum.shareit.pagination.Paginator;
+import ru.practicum.shareit.request.ItemRequest;
+import ru.practicum.shareit.request.ItemRequestStorage;
 import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserStorage;
 
@@ -25,19 +28,25 @@ public class ItemService {
     private final UserStorage userStorage;
     private final BookingStorage bookingStorage;
     private final CommentStorage commentStorage;
+    private final ItemRequestStorage requestStorage;
+
 
     @Autowired
     public ItemService(ItemStorage itemStorage, UserStorage userStorage,
-                       BookingStorage bookingStorage, CommentStorage commentStorage) {
+                       BookingStorage bookingStorage, CommentStorage commentStorage, ItemRequestStorage itemRequestStorage) {
         this.itemStorage = itemStorage;
         this.userStorage = userStorage;
         this.bookingStorage = bookingStorage;
         this.commentStorage = commentStorage;
+        this.requestStorage = itemRequestStorage;
     }
 
     @Transactional
     public ItemDtoShort createItem(long userId, ItemDtoShort item) {
         User user = checkUserId(userId);
+        if (item.getRequestId() != null) {
+            checkRequestId(item.getRequestId());
+        }
         Item createdItem = itemStorage.save(ItemMapper.toItem(item, user));
         log.info("Пользователь с id {} создал вещь {}", userId, createdItem);
         return ItemMapper.toItemDtoShort(createdItem);
@@ -48,7 +57,7 @@ public class ItemService {
         Item expectedItem = checkItemId(itemId);
         if (expectedItem.getOwner().getId() != userId) {
             throw new NotFoundException(
-                    String.format("Пользователь с id %d не являеться владельщем вещи с id %d", userId, itemId));
+                    String.format("Пользователь с id %d не является владельцем вещи с id %d", userId, itemId));
         }
         if (item.getName() != null && !item.getName().isBlank()) {
             expectedItem.setName(item.getName());
@@ -80,8 +89,8 @@ public class ItemService {
     }
 
     @Transactional(readOnly = true)
-    public List<ItemDto> getItemsByUser(long userId) {
-        Map<Long, Item> itemMap = itemStorage.findAllItemsByOwnerId(userId)
+    public List<ItemDto> getItemsByUser(long userId, Integer from, Integer size) {
+        Map<Long, Item> itemMap = itemStorage.findAllItemsByOwnerId(userId, Paginator.simplePage(from, size))
                 .stream()
                 .collect(Collectors.toMap(Item::getId, Function.identity()));
 
@@ -99,12 +108,12 @@ public class ItemService {
     }
 
     @Transactional(readOnly = true)
-    public List<ItemDtoShort> searchItems(String query) {
+    public List<ItemDtoShort> searchItems(String query, Integer from, Integer size) {
         if (query.isBlank()) {
             log.info("Получен список из 0 вещей по запросу '{}'", query);
             return Collections.emptyList();
         }
-        List<ItemDtoShort> foundItems = itemStorage.search(query).stream()
+        List<ItemDtoShort> foundItems = itemStorage.search(query, Paginator.simplePage(from, size)).stream()
                 .map(ItemMapper::toItemDtoShort).collect(Collectors.toList());
         log.info("Получен список из {} вещей по запросу '{}'", foundItems.size(), query);
         return foundItems;
@@ -114,7 +123,7 @@ public class ItemService {
     public CommentDtoResponse createComment(long itemId, long userId, CommentDtoRequest commentDto) {
         User user = checkUserId(userId);
         if (!bookingStorage.existsByItemIdAndBookerIdAndEndBefore(itemId, userId, LocalDateTime.now())) {
-            throw new BookingStatusException("Нельзя оставить коммантарий");
+            throw new BookingStatusException("Нельзя оставить комментарий");
         }
         Comment comment = commentStorage.save(CommentMapper.toComment(commentDto, user, itemId));
         log.info("Получен комментарий от пользователя {}", userId);
@@ -135,5 +144,10 @@ public class ItemService {
         List<CommentDtoResponse> commentList = comments
                 .stream().map(CommentMapper::toCommentDtoResponse).collect(Collectors.toList());
         return ItemMapper.toItemDto(item, commentList);
+    }
+
+    private ItemRequest checkRequestId(long reqId) {
+        return requestStorage.findById(reqId).orElseThrow(() ->
+                new NotFoundException(String.format("Запрос с id %d не существует", reqId)));
     }
 }
