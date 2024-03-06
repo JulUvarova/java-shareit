@@ -2,10 +2,6 @@ package ru.practicum.shareit.exception;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.core.MethodParameter;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-
-import javax.xml.bind.ValidationException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -44,15 +40,6 @@ class ExceptionApiHandlerTest {
         assertEquals(unsupportedOperationException.getMessage(), response.getError());
     }
 
-//    @Test
-//    void handleMethodArgumentNotValidException() {
-//        MethodArgumentNotValidException argumentNotValidException = new MethodArgumentNotValidException(MethodParameter.forParameter(1));
-//
-//        ErrorMessage response = apiHandler.handleMethodArgumentNotValidException(argumentNotValidException);
-//
-//        assertEquals(argumentNotValidException.getMessage(), response.getError());
-//    }
-
     @Test
     void handleBookingException() {
         BookingStatusException statusException = new BookingStatusException("Smth With Booking");
@@ -61,8 +48,4 @@ class ExceptionApiHandlerTest {
 
         assertEquals(statusException.getMessage(), response.getError());
     }
-
-//    @Test
-//    void handleUnhandledException() {
-//    }
 }
