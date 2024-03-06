@@ -52,16 +52,16 @@ public class ItemController {
 
     @GetMapping
     public List<ItemDto> getItemsByUser(@RequestHeader(Constant.OWNER_ID) long userId,
-                                        @RequestParam(name = "from", defaultValue = "0", required = false) @PositiveOrZero Integer from,
-                                        @RequestParam(name = "size", defaultValue = "5", required = false) @Positive Integer size) {
+                                        @RequestParam(name = "from", defaultValue = "0") @PositiveOrZero Integer from,
+                                        @RequestParam(name = "size", defaultValue = "5") @Positive Integer size) {
         log.info("Получен запрос от пользователя с id {} на получение списка его вещей", userId);
         return itemService.getItemsByUser(userId, from, size);
     }
 
     @GetMapping("/search")
     public List<ItemDtoShort> searchItems(@RequestParam String text,
-                                          @RequestParam(name = "from", defaultValue = "0", required = false) @PositiveOrZero Integer from,
-                                          @RequestParam(name = "size", defaultValue = "5", required = false) @Positive Integer size) {
+                                          @RequestParam(name = "from", defaultValue = "0") @PositiveOrZero Integer from,
+                                          @RequestParam(name = "size", defaultValue = "5") @Positive Integer size) {
         log.info("Получен запрос на поиск '{}' среди вещей", text);
         return itemService.searchItems(text, from, size);
     }

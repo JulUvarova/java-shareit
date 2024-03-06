@@ -45,18 +45,8 @@ public class ItemRequestService {
     public List<ItemRequestDtoResponse> getRequestsByOwner(long userId, Integer from, Integer size) {
         checkUserId(userId);
 
-        Map<Long, ItemRequest> requests = requestStorage.findAllByRequestorId(userId, Paginator.withSort(from, size, Constant.SORT_BY_CREATED_DESC))
-                .stream()
-                .collect(Collectors.toMap(ItemRequest::getId, Function.identity()));
-
-        Map<Long, List<ItemDtoForRequest>> items = itemStorage.findAllByRequestIdIn(requests.keySet())
-                .stream()
-                .collect(Collectors.groupingBy(ItemDtoForRequest::getRequestId));
-
-        List<ItemRequestDtoResponse> itemsRequest = requests.values()
-                .stream()
-                .map(i -> ItemRequestMapper.toItemRequestDtoResponse(i, items.getOrDefault(i.getId(), List.of())))
-                .collect(Collectors.toList());
+        List<ItemRequest> itemRequests = requestStorage.findAllByRequestorId(userId, Paginator.withSort(from, size, Constant.SORT_BY_CREATED_DESC));
+        List<ItemRequestDtoResponse> itemsRequest = joinItemsToItemRequest(itemRequests);
         log.info("Пользователь {} получил список своих запросов из {} элементов", userId, itemsRequest.size());
         return itemsRequest;
     }
@@ -65,18 +55,8 @@ public class ItemRequestService {
     public List<ItemRequestDtoResponse> getAllRequests(long userId, Integer from, Integer size) {
         checkUserId(userId);
 
-        Map<Long, ItemRequest> requests = requestStorage.findAllByRequestorIdNot(userId, Paginator.withSort(from, size, Constant.SORT_BY_CREATED_DESC))
-                .stream()
-                .collect(Collectors.toMap(ItemRequest::getId, Function.identity()));
-
-        Map<Long, List<ItemDtoForRequest>> items = itemStorage.findAllByRequestIdIn(requests.keySet())
-                .stream()
-                .collect(Collectors.groupingBy(ItemDtoForRequest::getRequestId));
-
-        List<ItemRequestDtoResponse> itemsRequest = requests.values()
-                .stream()
-                .map(i -> ItemRequestMapper.toItemRequestDtoResponse(i, items.getOrDefault(i.getId(), List.of())))
-                .collect(Collectors.toList());
+        List<ItemRequest> itemRequests = requestStorage.findAllByRequestorIdNot(userId, Paginator.withSort(from, size, Constant.SORT_BY_CREATED_DESC));
+        List<ItemRequestDtoResponse> itemsRequest = joinItemsToItemRequest(itemRequests);
         log.info("Пользователь {} получил список всех запросов из {} элементов", userId, itemsRequest.size());
         return itemsRequest;
     }
@@ -89,6 +69,22 @@ public class ItemRequestService {
 
         log.info("Пользователь {} получил запрос с id {}", userId, requestId);
         return ItemRequestMapper.toItemRequestDtoResponse(reqItem, items);
+    }
+
+    private List<ItemRequestDtoResponse> joinItemsToItemRequest(List<ItemRequest> itemRequests) {
+        Map<Long, ItemRequest> requests = itemRequests
+                .stream()
+                .collect(Collectors.toMap(ItemRequest::getId, Function.identity()));
+
+        Map<Long, List<ItemDtoForRequest>> items = itemStorage.findAllByRequestIdIn(requests.keySet())
+                .stream()
+                .collect(Collectors.groupingBy(ItemDtoForRequest::getRequestId));
+
+        List<ItemRequestDtoResponse> itemsRequest = requests.values()
+                .stream()
+                .map(i -> ItemRequestMapper.toItemRequestDtoResponse(i, items.getOrDefault(i.getId(), List.of())))
+                .collect(Collectors.toList());
+        return itemsRequest;
     }
 
     private User checkUserId(long userId) {

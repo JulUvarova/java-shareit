@@ -35,16 +35,16 @@ public class ItemRequestController {
 
     @GetMapping
     public List<ItemRequestDtoResponse> getRequests(@RequestHeader(Constant.OWNER_ID) long userId,
-                                                    @RequestParam(name = "from", defaultValue = "0", required = false) @PositiveOrZero Integer from,
-                                                    @RequestParam(name = "size", defaultValue = "5", required = false) @Positive Integer size) {
+                                                    @RequestParam(name = "from", defaultValue = "0") @PositiveOrZero Integer from,
+                                                    @RequestParam(name = "size", defaultValue = "5") @Positive Integer size) {
         log.info("Получен запрос от пользователя с id {} на получение списка запросов", userId);
         return requestService.getRequestsByOwner(userId, from, size);
     }
 
     @GetMapping("/all")
     public List<ItemRequestDtoResponse> getAllRequests(@RequestHeader(Constant.OWNER_ID) long userId,
-                                                       @RequestParam(name = "from", defaultValue = "0", required = false) @PositiveOrZero Integer from,
-                                                       @RequestParam(name = "size", defaultValue = "5", required = false) @Positive Integer size) {
+                                                       @RequestParam(name = "from", defaultValue = "0") @PositiveOrZero Integer from,
+                                                       @RequestParam(name = "size", defaultValue = "5") @Positive Integer size) {
         log.info("Получен запрос от пользователя с id {} на получение запросов по {} на странице", userId, size);
         return requestService.getAllRequests(userId, from, size);
     }
