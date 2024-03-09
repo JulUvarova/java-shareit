@@ -27,5 +27,5 @@ public class ItemDtoShort {
     @NotNull(groups = Marker.OnCreate.class, message = "Статус не может отсутствовать")
     private Boolean available;
 
-    private Long request;
+    private Long requestId;
 }
