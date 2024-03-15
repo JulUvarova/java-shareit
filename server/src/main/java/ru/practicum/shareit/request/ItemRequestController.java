@@ -8,9 +8,6 @@ import ru.practicum.shareit.constant.Constant;
 import ru.practicum.shareit.request.dto.ItemRequestDtoRequest;
 import ru.practicum.shareit.request.dto.ItemRequestDtoResponse;
 
-import javax.validation.Valid;
-import javax.validation.constraints.Positive;
-import javax.validation.constraints.PositiveOrZero;
 import java.util.List;
 
 @RestController
@@ -28,23 +25,23 @@ public class ItemRequestController {
 
     @PostMapping
     public ItemRequestDtoResponse createItemRequest(@RequestHeader(Constant.OWNER_ID) long userId,
-                                                    @Valid @RequestBody ItemRequestDtoRequest requestDto) {
+                                                    @RequestBody ItemRequestDtoRequest requestDto) {
         log.info("Получен запрос от пользователя с id {} на создание запроса на вещь", userId);
         return requestService.createRequest(userId, requestDto);
     }
 
     @GetMapping
     public List<ItemRequestDtoResponse> getRequests(@RequestHeader(Constant.OWNER_ID) long userId,
-                                                    @RequestParam(name = "from", defaultValue = "0") @PositiveOrZero Integer from,
-                                                    @RequestParam(name = "size", defaultValue = "5") @Positive Integer size) {
+                                                    @RequestParam(name = "from", defaultValue = "0") Integer from,
+                                                    @RequestParam(name = "size", defaultValue = "5") Integer size) {
         log.info("Получен запрос от пользователя с id {} на получение списка запросов", userId);
         return requestService.getRequestsByOwner(userId, from, size);
     }
 
     @GetMapping("/all")
     public List<ItemRequestDtoResponse> getAllRequests(@RequestHeader(Constant.OWNER_ID) long userId,
-                                                       @RequestParam(name = "from", defaultValue = "0") @PositiveOrZero Integer from,
-                                                       @RequestParam(name = "size", defaultValue = "5") @Positive Integer size) {
+                                                       @RequestParam(name = "from", defaultValue = "0") Integer from,
+                                                       @RequestParam(name = "size", defaultValue = "5") Integer size) {
         log.info("Получен запрос от пользователя с id {} на получение запросов по {} на странице", userId, size);
         return requestService.getAllRequests(userId, from, size);
     }

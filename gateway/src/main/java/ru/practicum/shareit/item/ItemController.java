@@ -14,6 +14,7 @@ import ru.practicum.shareit.validation.Marker;
 import javax.validation.Valid;
 import javax.validation.constraints.Positive;
 import javax.validation.constraints.PositiveOrZero;
+import java.util.Collections;
 
 @Controller
 @RequestMapping(path = "/items")
@@ -57,6 +58,10 @@ public class ItemController {
     public ResponseEntity<Object> searchItems(@RequestParam String text,
                                           @RequestParam(name = "from", defaultValue = "0") @PositiveOrZero Integer from,
                                           @RequestParam(name = "size", defaultValue = "5") @Positive Integer size) {
+        if (text.isBlank()) {
+            log.info("Получен список из 0 вещей по запросу '{}'", text);
+            return (ResponseEntity<Object>) Collections.emptyList();
+        }
         log.info("Получен запрос на поиск {} среди вещей", text);
         return itemClient.searchItems(text, from, size);
     }

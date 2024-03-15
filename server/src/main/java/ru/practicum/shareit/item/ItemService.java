@@ -109,10 +109,6 @@ public class ItemService {
 
     @Transactional(readOnly = true)
     public List<ItemDtoShort> searchItems(String query, Integer from, Integer size) {
-        if (query.isBlank()) {
-            log.info("Получен список из 0 вещей по запросу '{}'", query);
-            return Collections.emptyList();
-        }
         List<ItemDtoShort> foundItems = itemStorage.search(query, Paginator.simplePage(from, size)).stream()
                 .map(ItemMapper::toItemDtoShort).collect(Collectors.toList());
         log.info("Получен список из {} вещей по запросу '{}'", foundItems.size(), query);
