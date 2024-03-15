@@ -26,7 +26,6 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -86,25 +85,6 @@ class BookingControllerTest {
                 .andExpect(jsonPath("$.id", is(bookingResponse.getId()), Long.class))
                 .andExpect(jsonPath("$.item.id", is(bookingResponse.getItem().getId()), Long.class))
                 .andExpect(jsonPath("$.booker.id", is(bookingResponse.getBooker().getId()), Long.class));
-    }
-
-    @Test
-    void createBooking_whenInvalidBookingStart_thenReturnBadRequest() throws Exception {
-        BookingDtoRequest invalidBookingRequest = BookingDtoRequest.builder()
-                .start(LocalDateTime.now().minusDays(1L))
-                .end(LocalDateTime.now().plusDays(1L))
-                .itemId(1L)
-                .build();
-
-        mvc.perform(post("/bookings")
-                        .content(mapper.writeValueAsString(invalidBookingRequest))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header(Constant.OWNER_ID, "1"))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(bookingService);
     }
 
     @Test

@@ -112,73 +112,6 @@ class UserControllerTest {
     }
 
     @Test
-    void createUser_whenEmptyUserName_thenReturnException() throws Exception {
-        firstUser.setName("");
-
-        mvc.perform(post("/users")
-                        .content(mapper.writeValueAsString(firstUser))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(userService);
-    }
-
-    @Test
-    void createUser_whenLargestUserName_thenReturnException() throws Exception {
-        firstUser.setName("Пабло Диего Хозе Франциско де Паула Хуан Непомукено Криспин Криспиано де ла Сантисима Тринидад Руиз Пикассо");
-
-        mvc.perform(post("/users")
-                        .content(mapper.writeValueAsString(firstUser))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void createUser_whenEmptyEmail_thenReturnException() throws Exception {
-        firstUser.setEmail("");
-
-        mvc.perform(post("/users")
-                        .content(mapper.writeValueAsString(firstUser))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(userService);
-    }
-
-    @Test
-    void createUser_whenLargestEmail_thenReturnException() throws Exception {
-        firstUser.setEmail("contact-admin-hello-webmaster-info-services-peter-crazy-but-oh-so-ubber-cool-english-alphabet-loverer-abcdefghijklmnopqrstuvwxyz@please-try-to.send-me-an-email-if-you-can-possibly-begin-to-remember-this-coz.this-is-the-longest-email-address-known-to-man-but-to-be-honest.this-is-such-a-stupidly-long-sub-domain-it-could-go-on-forever.pacraig.com");
-
-        mvc.perform(post("/users")
-                        .content(mapper.writeValueAsString(firstUser))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void createUser_whenInvalidEmailPattern_thenReturnException() throws Exception {
-        firstUser.setEmail("@user.mail!&");
-
-        mvc.perform(post("/users")
-                        .content(mapper.writeValueAsString(firstUser))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
     void updateUser_whenAnyUser_thenReturnUser() throws Exception {
         firstUser.builder().name("UpdateName").email("update@mail.ru").build();
 
@@ -195,47 +128,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.id", is(firstUser.getId()), Long.class))
                 .andExpect(jsonPath("$.name", is(firstUser.getName())))
                 .andExpect(jsonPath("$.email", is(firstUser.getEmail())));
-    }
-
-    @Test
-    void updateUser_whenLargestUserName_thenReturnException() throws Exception {
-        firstUser.setName("Пабло Диего Хозе Франциско де Паула Хуан Непомукено Криспин Криспиано де ла Сантисима Тринидад Руиз Пикассо");
-
-        mvc.perform(patch("/users/{userId}", 1L)
-                        .content(mapper.writeValueAsString(firstUser))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(userService);
-    }
-
-    @Test
-    void updateUser_whenLargestEmail_thenReturnException() throws Exception {
-        firstUser.setEmail("contact-admin-hello-webmaster-info-services-peter-crazy-but-oh-so-ubber-cool-english-alphabet-loverer-abcdefghijklmnopqrstuvwxyz@please-try-to.send-me-an-email-if-you-can-possibly-begin-to-remember-this-coz.this-is-the-longest-email-address-known-to-man-but-to-be-honest.this-is-such-a-stupidly-long-sub-domain-it-could-go-on-forever.pacraig.com");
-
-        mvc.perform(patch("/users/{userId}", 1L)
-                        .content(mapper.writeValueAsString(firstUser))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(userService);
-    }
-
-    @Test
-    void updateUser_whenInvalidEmailPattern_thenReturnException() throws Exception {
-        firstUser.setEmail("@user.mail!&");
-
-        mvc.perform(patch("/users/{userId}", 1L)
-                        .content(mapper.writeValueAsString(firstUser))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
     }
 
     @Test

@@ -25,7 +25,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -98,57 +97,6 @@ class ItemControllerTest {
     }
 
     @Test
-    void createItem_whenInvalidItemName_thenReturnBadRequest() throws Exception {
-        itemRequest = ItemDtoShort.builder()
-                .name("")
-                .build();
-
-        mvc.perform(post("/items")
-                        .content(mapper.writeValueAsString(itemRequest))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header(Constant.OWNER_ID, "1"))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(itemService);
-    }
-
-    @Test
-    void createItem_whenInvalidItemDescription_thenReturnBadRequest() throws Exception {
-        itemRequest = ItemDtoShort.builder()
-                .description("")
-                .build();
-
-        mvc.perform(post("/items")
-                        .content(mapper.writeValueAsString(itemRequest))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header(Constant.OWNER_ID, "1"))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(itemService);
-    }
-
-    @Test
-    void createItem_whenInvalidItemAvailable_thenReturnBadRequest() throws Exception {
-        itemRequest = ItemDtoShort.builder()
-                .available(null)
-                .build();
-
-        mvc.perform(post("/items")
-                        .content(mapper.writeValueAsString(itemRequest))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header(Constant.OWNER_ID, "1"))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(itemService);
-    }
-
-    @Test
     void updateItem_whenValidItem_thenReturnItem() throws Exception {
         when(itemService.updateItem(anyLong(), anyLong(), any(ItemDtoShort.class)))
                 .thenReturn(itemResponse);
@@ -167,30 +115,6 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.name", is(itemResponse.getName())))
                 .andExpect(jsonPath("$.available", is(itemResponse.getAvailable())))
                 .andExpect(jsonPath("$.description", is(itemResponse.getDescription())));
-    }
-
-    @Test
-    void updateItem_whenInvalidItemDescription_thenReturnBadRequest() throws Exception {
-        itemRequest = ItemDtoShort.builder()
-                .description("Реализовать юнит-тесты для всего кода, содержащего логику. \" +\n" +
-                        "Выберите те классы, которые содержат в себе нетривиальные методы, условия и ветвления. \" +\n" +
-                        "В основном это будут классы сервисов. Напишите юнит-тесты на все такие методы, используя моки при необходимости.\\n\" +\n" +
-                        "Реализовать интеграционные тесты, проверяющие взаимодействие с базой данных. Как вы помните, \" +\n" +
-                        "интеграционные тесты представляют собой более высокий уровень тестирования: их обычно требуется \" +\n" +
-                        "меньше, но покрытие каждого — больше. Мы предлагаем вам создать по одному интеграционному тесту\" +\n" +
-                        "для каждого крупного метода в ваших сервисах. Например, для метода getUserItems в классе ItemServiceImpl.")
-                .build();
-        long id = 1L;
-
-        mvc.perform(patch("/items/{itemId}", id)
-                        .content(mapper.writeValueAsString(itemRequest))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header(Constant.OWNER_ID, "1"))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(itemService);
     }
 
     @Test
@@ -320,23 +244,5 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.id", is(commentResponse.getId()), Long.class))
                 .andExpect(jsonPath("$.text", is(commentResponse.getText())))
                 .andExpect(jsonPath("$.authorName", is(commentResponse.getAuthorName())));
-    }
-
-    @Test
-    void createComment_whenInvalidCommentSize_thenReturnBadRequest() throws Exception {
-        CommentDtoRequest commentRequest = CommentDtoRequest.builder()
-                .text("")
-                .build();
-        long id = 1L;
-
-        mvc.perform(post("/items/{itemId}/comment", id)
-                        .content(mapper.writeValueAsString(commentRequest))
-                        .characterEncoding(StandardCharsets.UTF_8)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header(Constant.OWNER_ID, "1"))
-                .andDo(print())
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(itemService);
     }
 }

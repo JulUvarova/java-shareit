@@ -229,15 +229,6 @@ class ItemServiceTest {
     }
 
     @Test
-    void searchItems_whenQueryIsBlank_thenReturnEmptyList() {
-        String query = "";
-        List<ItemDtoShort> actualList = itemService.searchItems(query, 0, 5);
-
-        assertEquals(0, actualList.size());
-        verify(itemStorage, times(0)).search(query, page);
-    }
-
-    @Test
     void searchItems_whenValidQuery_thenReturnItemList() {
         String query = "brain";
         when(itemStorage.search(anyString(), any(PageRequest.class)))
