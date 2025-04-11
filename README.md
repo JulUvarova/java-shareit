@@ -12,7 +12,7 @@
 - [Особенности](#-особенности)
 
 ## ⚙️ Технологии
-- Java 11
+- Java
 - Spring Boot
 - PostgreSQL
 - Hibernate
